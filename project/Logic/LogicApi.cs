@@ -7,8 +7,7 @@ namespace Logic
     {
         public abstract void CreateBalls(int number);
         public abstract int GetNumberOfBalls();
-        public abstract double GetX(int number);
-        public abstract double GetY(int number);
+        public abstract Vector2 GetPosition(int number);
         public abstract event EventHandler LogicApiEvent;
         public static LogicApi Instance(DataApi dataApi)
         {
@@ -40,13 +39,9 @@ namespace Logic
             {
                 return dataApi.GetNumberOfBalls();
             }
-            public override double GetX(int number)
+            public override Vector2 GetPosition(int number)
             {
-                return dataApi.GetX(number);
-            }
-            public override double GetY(int number)
-            {
-                return dataApi.GetY(number);
+                return dataApi.GetPosition(number);
             }
 
             private void Ball_PositionChanged(object sender, EventArgs e)
@@ -61,23 +56,23 @@ namespace Logic
 
             private void CheckCollisionWithWalls(IBall ball)
             {
-                Vector2 newSpeed = new Vector2(ball.Speed.X, ball.Speed.Y);
-                if (ball.Position.X < 0)
+                Vector2 newSpeed = ball.Speed;
+                if (ball.Position.X <= 0)
                 {
-                    newSpeed.X = ball.Speed.X * -1;
+                    newSpeed.X = Math.Abs(ball.Speed.X);
                 }
-                if (ball.Position.Y < 0)
+                if (ball.Position.Y <= 0)
                 {
-                    newSpeed.Y = ball.Speed.Y * -1;
+                    newSpeed.Y = Math.Abs(ball.Speed.Y);
                 }
 
-                if (ball.Position.X + IBall.Radius > dataApi.Width)
+                if (ball.Position.X + IBall.Radius >= dataApi.Width)
                 {
-                    newSpeed.X = ball.Speed.X * -1;
+                    newSpeed.X = -Math.Abs(ball.Speed.X);
                 }
                 if (ball.Position.Y + IBall.Radius > dataApi.Height)
                 {
-                    newSpeed.Y = ball.Speed.Y * -1;
+                    newSpeed.Y = -Math.Abs(ball.Speed.Y);
                 }
                 ball.Speed = newSpeed;
             }

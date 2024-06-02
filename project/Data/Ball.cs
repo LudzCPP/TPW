@@ -1,12 +1,12 @@
-﻿using System;
+﻿using System.Diagnostics;
 using System.Numerics;
 
 namespace Data
 {
     public interface IBall
     {
+        int ID { get; }
         Vector2 Position { get; }
-        int MoveTime { get; }
         const int Radius = 50;
         float Weight { get; }
         Vector2 Speed { get; set; }
@@ -18,10 +18,14 @@ namespace Data
         private float _weight;
         private Vector2 _speed;
         private Vector2 _position;
+        private Stopwatch _stopwatch;
+        public int ID { get; }
 
-        public Ball(int x, int y, float weight)
+        public Ball(int x, int y, float weight, int id)
         {
+            _stopwatch = new Stopwatch();
             _weight = weight;
+            ID = id;
             Random rnd = new Random();
             Speed = new Vector2(x, y)
             {
@@ -44,13 +48,18 @@ namespace Data
             PositionChanged?.Invoke(this, EventArgs.Empty);
         }
         
-        public int MoveTime
+        private int MoveTime
         {
             get => _moveTime;
-            private set
+            set
             {
                 _moveTime = value;
             }
+        }
+        public Vector2 Position
+        {
+            get => _position;
+            private set { _position = value; }
         }
         public Vector2 Speed
         {
@@ -60,14 +69,7 @@ namespace Data
                 _speed = value;
             }
         }
-        public Vector2 Position 
-        { 
-            get => _position; 
-            private set { _position = value; }
-        }
-
         public float Weight { get => _weight; }
-
         public void Move()
         {
             Position += Speed * MoveTime;
@@ -77,10 +79,22 @@ namespace Data
         {
             Task.Run(async () =>
             {
+                int delay = 0;
                 while (true)
                 {
+                    _stopwatch.Restart();
+                    _stopwatch.Start();
                     Move();
-                    await Task.Delay(MoveTime);
+                    _stopwatch.Stop();
+                    if (MoveTime - _stopwatch.ElapsedMilliseconds < 0)
+                    {
+                        delay = 0;
+                    }
+                    else
+                    {
+                        delay = MoveTime - (int)_stopwatch.ElapsedMilliseconds;
+                    }
+                    await Task.Delay(delay);
                 }
             });
         }
