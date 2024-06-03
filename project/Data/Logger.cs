@@ -1,6 +1,9 @@
-﻿using System.Collections.Concurrent;
-using System.Text.Json;
+using System;
+using System.Collections.Concurrent;
+using System.IO;
 using System.Numerics;
+using System.Text.Json;
+using System.Threading;
 
 namespace Data
 {
@@ -13,47 +16,49 @@ namespace Data
             public float Y { get; }
             public float SpeedHorizontal { get; }
             public float SpeedVertical { get; }
-            public string Date { get; }
+            public string EventTime { get; }
+            public string LogTime { get; set; }
 
-
-            public BallToSerialize(Vector2 position, Vector2 speed, int id, string date)
+            public BallToSerialize(Vector2 position, Vector2 speed, int id, string eventTime)
             {
                 X = position.X;
                 Y = position.Y;
-                Date = date;
+                EventTime = eventTime;
                 SpeedHorizontal = speed.X;
                 SpeedVertical = speed.Y;
                 Id = id;
             }
         }
 
-        ConcurrentQueue<BallToSerialize> _queue;
+        private ConcurrentQueue<BallToSerialize> _queue;
+        private Timer _timer;
+        private readonly object _fileLock = new object();
+        private StreamWriter _streamWriter;
+
         public Logger()
         {
             _queue = new ConcurrentQueue<BallToSerialize>();
-            WriteToFile();
+            _streamWriter = new StreamWriter("logs.json");
+            _timer = new Timer(OnTimedEvent, null, 0, 1000);
         }
 
-        public void AddObjectToQueue(IBall obj, string date)
+        public void AddObjectToQueue(IBall obj, string eventTime)
         {
-            _queue.Enqueue(new BallToSerialize(obj.Position, obj.Speed, obj.ID, date));
+            _queue.Enqueue(new BallToSerialize(obj.Position, obj.Speed, obj.ID, eventTime));
         }
 
-        private void WriteToFile()
+        private void OnTimedEvent(Object state)
         {
-            Task.Run(async () =>
+            lock (_fileLock)
             {
-                using StreamWriter _streamWriter = new StreamWriter("logs.json");
-                while (true)
+                while (_queue.TryDequeue(out BallToSerialize item))
                 {
-                    while (_queue.TryDequeue(out BallToSerialize item))
-                    {
-                        string jsonString = JsonSerializer.Serialize(item);
-                        _streamWriter.WriteLine(jsonString);
-                    }
-                    await _streamWriter.FlushAsync();
+                    item.LogTime = DateTime.UtcNow.ToString("MM/dd/yyyy HH:mm:ss.fff");
+                    string jsonString = JsonSerializer.Serialize(item);
+                    _streamWriter.WriteLine(jsonString);
                 }
-            });
+                _streamWriter.Flush();
+            }
         }
     }
 }
